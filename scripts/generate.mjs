@@ -14,6 +14,31 @@ const SITE_ORIGIN = "https://hardrivetech.github.io";
 
 const YEARS = [new Date().getFullYear(), new Date().getFullYear() + 1];
 
+// Google Analytics Measurement ID (optional). Enable by setting env GA_ID in CI.
+const GA_ID = process.env.GA_ID || "";
+
+// Affiliate links (replace YOUR_ID with your affiliate/ref IDs)
+const AFFILIATES = {
+  default: {
+    travel: "https://example-travel-partner.com/?ref=YOUR_ID",
+    gifts: "https://example-gifts.com/?ref=YOUR_ID",
+  },
+  // Country-specific overrides (optional)
+  US: {
+    travel: "https://example-travel-partner.com/us?ref=YOUR_ID",
+    gifts: "https://example-gifts.com/us?ref=YOUR_ID",
+  },
+  GB: {
+    travel: "https://example-travel-partner.com/uk?ref=YOUR_ID",
+    gifts: "https://example-gifts.com/uk?ref=YOUR_ID",
+  },
+};
+
+// Resolve affiliate links for a given country code
+function affiliateFor(code) {
+  return { ...AFFILIATES.default, ...(AFFILIATES[code] || {}) };
+}
+
 async function fetchJson(url) {
   return new Promise((resolve, reject) => {
     https
@@ -54,9 +79,28 @@ function htmlEscape(s) {
 function pageLayout({ title, description, content, canonical }) {
   const escapedTitle = htmlEscape(title);
   const escapedDesc = htmlEscape(description);
-  const canonicalTag = canonical
+  let canonicalTag = canonical
     ? `<link rel=\"canonical\" href=\"${canonical}\">`
     : "";
+  const canonicalUrl = canonical || `${SITE_ORIGIN}${BASE_PATH}/`;
+  const analytics = GA_ID
+    ? `<script async src=\"https://www.googletagmanager.com/gtag/js?id=${GA_ID}\"></script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);} 
+gtag('js', new Date());
+gtag('config', '${GA_ID}');
+</script>`
+    : "";
+  const headExtras = `
+<meta property=\"og:title\" content=\"${escapedTitle}\"/>
+<meta property=\"og:description\" content=\"${escapedDesc}\"/>
+<meta property=\"og:url\" content=\"${canonicalUrl}\"/>
+<meta property=\"og:type\" content=\"website\"/>
+<meta name=\"twitter:card\" content=\"summary\"/>
+${analytics}
+`;
+  canonicalTag += headExtras;
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -79,6 +123,7 @@ ${canonicalTag}
   th{background:#f8f8f8}
 </style>
 </head>
+
 <body>
 <header>
   <h1>${escapedTitle}</h1>
