@@ -4,10 +4,10 @@ Static site that lists public holidays by country and year using the free Nager.
 
 ## Quick start
 
-1. Replace `YOUR_USERNAME` in:
-   - `docs/CNAME`
-   - `scripts/generate.mjs` (canonical URLs)
-2. Commit and push to GitHub.
+1. In `scripts/generate.mjs`, set:
+   - `BASE_PATH = "/ProgrammaticSEO"`
+   - `SITE_ORIGIN = "https://hardrivetech.github.io"`
+2. Commit and push to GitHub (default branch `main`).
 3. Enable GitHub Pages in repository settings:
    - **Source**: Deploy from a branch
    - **Branch**: `gh-pages` (the workflow publishes here)

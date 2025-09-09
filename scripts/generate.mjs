@@ -8,6 +8,9 @@ import https from "https";
 
 const ROOT = path.resolve("c:/Users/wingdoodles/Desktop/WebDev/RandomGame");
 const OUT_DIR = path.join(ROOT, "docs");
+// Configure base path for GitHub Pages project site and site origin for canonicals
+const BASE_PATH = "/ProgrammaticSEO"; // leading slash, no trailing slash
+const SITE_ORIGIN = "https://hardrivetech.github.io";
 
 const YEARS = [new Date().getFullYear(), new Date().getFullYear() + 1];
 
@@ -61,7 +64,7 @@ function pageLayout({ title, description, content, canonical }) {
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>${escapedTitle}</title>
 <meta name="description" content="${escapedDesc}"/>
-<link rel="sitemap" type="application/xml" href="/sitemap.xml"/>
+<link rel="sitemap" type="application/xml" href="${BASE_PATH}/sitemap.xml"/>
 ${canonicalTag}
 <style>
   body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,\"Helvetica Neue\",Arial;max-width:900px;margin:2rem auto;padding:0 1rem;line-height:1.6}
@@ -81,12 +84,13 @@ ${canonicalTag}
   <h1>${escapedTitle}</h1>
   <p>${escapedDesc}</p>
 </header>
-<nav><a href="/">Home</a></nav>
+<nav><a href="${BASE_PATH}/">Home</a></nav>
 <main>
 ${content}
 </main>
 <footer>
   <p>Data: Nager.Date public holidays API. Built automatically.</p>
+  <p><a href="${BASE_PATH}/">Home</a> · <a href="${BASE_PATH}/sitemap.xml">Sitemap</a></p>
 </footer>
 </body>
 </html>`;
@@ -108,7 +112,7 @@ async function buildIndex(countries) {
       const code = c.countryCode;
       const name = htmlEscape(c.name);
       const links = YEARS.map(
-        (y) => `<a href="/${code}/${y}.html">${y}</a>`
+        (y) => `<a href="${BASE_PATH}/${code}/${y}.html">${y}</a>`
       ).join(" · ");
       return `<div><strong>${name}</strong><br/>${links}</div>`;
     })
@@ -127,7 +131,7 @@ async function buildIndex(countries) {
     description:
       "Programmatic SEO site listing public holidays for each country across years.",
     content,
-    canonical: "https://YOUR_USERNAME.github.io/",
+    canonical: `${SITE_ORIGIN}${BASE_PATH}/`,
   });
   await writeFile(path.join(OUT_DIR, "index.html"), html);
 }
@@ -155,13 +159,15 @@ async function buildCountryYearPage(country, year, holidays) {
       country.name
     )}</strong> in <strong>${year}</strong>.</p>
     ${holidaysTable(holidays)}
-    <p><a href="/${country.countryCode}/${year + 1}.html">Next year →</a></p>
+    <p><a href="${BASE_PATH}/${country.countryCode}/${
+    year + 1
+  }.html">Next year →</a></p>
   `;
   const html = pageLayout({
     title,
     description,
     content,
-    canonical: `https://YOUR_USERNAME.github.io/${country.countryCode}/${year}.html`,
+    canonical: `${SITE_ORIGIN}${BASE_PATH}/${country.countryCode}/${year}.html`,
   });
   const outPath = path.join(OUT_DIR, country.countryCode, `${year}.html`);
   await writeFile(outPath, html);
@@ -169,11 +175,11 @@ async function buildCountryYearPage(country, year, holidays) {
 
 async function buildSitemap(countryCodes) {
   const urls = [
-    `<url><loc>https://YOUR_USERNAME.github.io/</loc></url>`,
+    `<url><loc>${SITE_ORIGIN}${BASE_PATH}/</loc></url>`,
     ...countryCodes.flatMap((code) =>
       YEARS.map(
         (y) =>
-          `<url><loc>https://YOUR_USERNAME.github.io/${code}/${y}.html</loc></url>`
+          `<url><loc>${SITE_ORIGIN}${BASE_PATH}/${code}/${y}.html</loc></url>`
       )
     ),
   ].join("");
