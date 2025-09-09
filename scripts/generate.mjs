@@ -187,6 +187,21 @@ async function buildSitemap(countryCodes) {
   await writeFile(path.join(OUT_DIR, "sitemap.xml"), xml);
 }
 
+async function buildRobots() {
+  const robots = `User-agent: *\nAllow: /\nSitemap: ${SITE_ORIGIN}${BASE_PATH}/sitemap.xml\n`;
+  await writeFile(path.join(OUT_DIR, "robots.txt"), robots);
+}
+
+async function build404() {
+  const html = pageLayout({
+    title: "Page not found",
+    description: "The page you were looking for doesn’t exist.",
+    content: `<p>We couldn't find that page.</p><p>Go back to the <a href="${BASE_PATH}/">home page</a>.</p>`,
+    canonical: `${SITE_ORIGIN}${BASE_PATH}/404.html`,
+  });
+  await writeFile(path.join(OUT_DIR, "404.html"), html);
+}
+
 async function main() {
   await ensureDir(OUT_DIR);
 
@@ -196,7 +211,7 @@ async function main() {
   );
 
   // You can shrink the initial scope to speed up build by slicing
-  const limited = countries.slice(0, 25); // start small; adjust later
+  const limited = countries; // all countries
 
   await buildIndex(limited);
 
@@ -219,6 +234,8 @@ async function main() {
   }
 
   await buildSitemap(limited.map((c) => c.countryCode));
+  await buildRobots();
+  await build404();
   console.log("Build complete. Output in /docs");
 }
 
