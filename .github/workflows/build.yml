@@ -24,6 +24,8 @@ jobs:
         run: echo "No deps"
       - name: Build
         run: node scripts/generate.mjs
+        env:
+          GA_ID: G-CJWNWMYRMB
       - name: Verify build output
         run: |
           ls -la docs

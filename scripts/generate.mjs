@@ -36,7 +36,67 @@ const AFFILIATES = {
 
 // Resolve affiliate links for a given country code
 function affiliateFor(code) {
-  return { ...AFFILIATES.default, ...(AFFILIATES[code] || {}) };
+  const upper = (code || "").toUpperCase();
+  const bookingAid = process.env.BOOKING_AID || "";
+  const tripAlliance = process.env.TRIP_ALLIANCEID || "";
+  const tripSid = process.env.TRIP_SID || "";
+  const gygPartner = process.env.GYG_PARTNER_ID || "";
+
+  // Prefer Booking.com (hotels), then Trip.com (flights), then GetYourGuide (tours)
+  const travelCandidates = [];
+  if (bookingAid)
+    travelCandidates.push(
+      `https://www.booking.com/index.html?aid=${bookingAid}`
+    );
+  if (tripAlliance && tripSid)
+    travelCandidates.push(
+      `https://www.trip.com/flights/?allianceid=${tripAlliance}&sid=${tripSid}`
+    );
+  if (gygPartner)
+    travelCandidates.push(
+      `https://www.getyourguide.com/?partner_id=${gygPartner}`
+    );
+  const travel = travelCandidates[0] || "https://www.trip.com/flights/"; // non-affiliate fallback
+
+  // Amazon gifts affiliate (country-aware), falls back to non-affiliate search if tag missing
+  const amazonTagDefault = process.env.AMAZON_TAG || "";
+  const amazonTags = {
+    US: process.env.AMAZON_TAG_US || amazonTagDefault,
+    GB: process.env.AMAZON_TAG_GB || amazonTagDefault,
+    CA: process.env.AMAZON_TAG_CA || amazonTagDefault,
+    AU: process.env.AMAZON_TAG_AU || amazonTagDefault,
+    IN: process.env.AMAZON_TAG_IN || amazonTagDefault,
+  };
+  const amazonTlds = {
+    US: "com",
+    GB: "co.uk",
+    CA: "ca",
+    AU: "com.au",
+    IN: "in",
+  };
+  const tld = amazonTlds[upper] || "com";
+  const tag = amazonTags[upper] || amazonTagDefault;
+  const giftsBase = `https://www.amazon.${tld}/s?k=gifts+for+holidays`;
+  const gifts = tag ? `${giftsBase}&tag=${tag}` : giftsBase;
+
+  return { travel, gifts };
+}
+
+// Simple per-country description text
+function countryDescription(country, year) {
+  const code = (country.countryCode || "").toUpperCase();
+  const name = htmlEscape(country.name || "");
+  const overrides = {
+    US: `${name} observes federal and state holidays. Popular observances include New Year's Day, Independence Day, Thanksgiving, and Christmas.`,
+    GB: `${name} has UK bank holidays and regional observances across England, Scotland, Wales, and Northern Ireland.`,
+    CA: `${name} includes national holidays and provincial observances throughout the year.`,
+    AU: `${name} features national holidays and state-based public holidays staggered across the calendar.`,
+    IN: `${name} observes national holidays alongside diverse religious and regional festivals.`,
+  };
+  return (
+    overrides[code] ||
+    `${name} observes a mix of national, cultural, and religious holidays throughout ${year}.`
+  );
 }
 
 async function fetchJson(url) {
@@ -199,11 +259,61 @@ function holidaysTable(holidays) {
 async function buildCountryYearPage(country, year, holidays) {
   const title = `${country.name} Public Holidays in ${year}`;
   const description = `Official public holidays for ${country.name} (${country.countryCode}) in ${year}.`;
+
+  // Affiliate CTAs
+  const aff = affiliateFor(country.countryCode);
+  const cta = `<p>
+    <a href="${aff.travel}">Compare flights and hotels</a> ·
+    <a href="${aff.gifts}">Send gifts and flowers</a>
+  </p>`;
+  const desc = countryDescription(country, year);
+
+  // Automated tips based on holiday distribution
+  let tips = "";
+  try {
+    const dates = holidays
+      .map((h) => new Date(h.date))
+      .filter((d) => !isNaN(d));
+    if (dates.length) {
+      const byMonth = Array.from({ length: 12 }, () => 0);
+      for (const d of dates) byMonth[d.getUTCMonth()]++;
+      const peakIndex = byMonth.indexOf(Math.max(...byMonth));
+      const monthNames = [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+      ];
+      const peakMonth = monthNames[peakIndex];
+      const sorted = dates.slice().sort((a, b) => a - b);
+      const first = sorted[0];
+      const last = sorted[sorted.length - 1];
+      const fmt = (d) => d.toISOString().slice(0, 10);
+      tips = `<p><em>Tips:</em> ${htmlEscape(country.name)} has ${
+        dates.length
+      } public holidays in ${year}. Peak month: ${peakMonth}. Consider planning travel and gifts around these dates (first: ${fmt(
+        first
+      )}, last: ${fmt(last)}).</p>`;
+    }
+  } catch (_) {}
+
   const content = `
+    ${cta}
     <p>Below are the public holidays for <strong>${htmlEscape(
       country.name
     )}</strong> in <strong>${year}</strong>.</p>
+    <p>${htmlEscape(desc)}</p>
     ${holidaysTable(holidays)}
+    ${tips}
+    ${cta}
     <p><a href="${BASE_PATH}/${country.countryCode}/${
     year + 1
   }.html">Next year →</a></p>
