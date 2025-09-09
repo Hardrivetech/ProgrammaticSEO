@@ -6,7 +6,7 @@ import fs from "fs/promises";
 import path from "path";
 import https from "https";
 
-const ROOT = path.resolve("c:/Users/wingdoodles/Desktop/WebDev/RandomGame");
+const ROOT = path.resolve(process.cwd());
 const OUT_DIR = path.join(ROOT, "docs");
 // Configure base path for GitHub Pages project site and site origin for canonicals
 const BASE_PATH = "/ProgrammaticSEO"; // leading slash, no trailing slash
